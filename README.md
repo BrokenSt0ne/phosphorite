@@ -1,17 +1,17 @@
 # phosphorite
-experimental real time lighting for gorilla tag
+A WIP Experimental real-time lighting mod for Gorilla Tag using the GorillaCorp lighting.
 
-## usage
-to open the ui to create lights/remove lights, press v on your keyboard
+## Usage
+You create and load lights via a menu opened by pressing the `V` key on your keyboard (they do *not* autoload as of now).
 
-make sure to save your lights that you added once done
+In the UI you should be greeted with options for position, intensity and color and a couple utility buttons beneath.
 
-to load a json, click the `Load Lights from JSON` button in the ui. heres a good example of a json: 
-[link to the json](https://github.com/BrokenSt0ne/phosphorite/blob/main/exampleLights.json)
+To load a json, click the `Load Lights from JSON` button in the ui. [Heres a good example of a json.]((https://github.com/BrokenSt0ne/phosphorite/blob/main/data.json)) *(note that it must be called data.json as of now and the example is only in city)*
 
-the lights from this json are in city, first go there and then load.
+If you spawn too many lights, your game ***WILL*** lag, depending on how many lights there are.
 
-if you spawn too many lights, your game ***WILL*** lag, depending on how much lights there are.
+Report issues in the *issues* tab at the top, or submit *pull requests* if you actually know how to code lol
 
-have fun and report issues in the *issues* tab at the top, or submit *pull requests* if you actually know how to code lol
-![image](https://github.com/user-attachments/assets/ed4460ea-2ab8-4374-9c6e-f0723ee39cb2)
+also this mod works outside moddeds as it gives literally 0 advantage lmfao
+
+###### *This product is not affiliated with Another Axiom Inc. or its videogames Gorilla Tag and Orion Drift and is not endorsed or otherwise sponsored by Another Axiom. Portions of the materials contained herein are property of Another Axiom. ©2021 Another Axiom Inc.*
