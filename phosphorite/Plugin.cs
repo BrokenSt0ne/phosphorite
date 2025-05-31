@@ -56,7 +56,7 @@ namespace phosphorite
         private string intensityInput = "1";
         private string colorInput = "#ffffff";
 
-        private string ambientColor = "#ffffff";
+        private string inputAmbientColor = "#ffffff";
 
         private bool saved;
 
@@ -80,7 +80,7 @@ namespace phosphorite
             lightSettings.ambientColor = Shader.GetGlobalColor("_GT_GameLight_Ambient_Color");
             lightSettings.lights = lightData;
             
-            string json = Newtonsoft.Json.JsonConvert.SerializeObject(lightSettings);
+            string json = Newtonsoft.Json.JsonConvert.SerializeObject(lightSettings, Formatting.Indented);
 
             Directory.CreateDirectory(PluginDirectory);
             File.WriteAllText(Path.Combine(PluginDirectory, "data.json"), json);
@@ -131,10 +131,10 @@ namespace phosphorite
             GUILayout.BeginArea(new Rect(10, 60, 300, 450), "Light Spawner", GUI.skin.window);
 
             GUILayout.Label("Ambient Color");
-            ambientColor = GUILayout.TextField(ambientColor);
+            inputAmbientColor = GUILayout.TextField(inputAmbientColor);
             if(GUILayout.Button("Apply Ambient Color"))
             {
-                ColorUtility.TryParseHtmlString(ambientColor, out Color amColor);
+                ColorUtility.TryParseHtmlString(inputAmbientColor, out Color amColor);
                 lightingManager.SetAmbientLightDynamic(amColor);
             }
 
