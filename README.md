@@ -11,7 +11,12 @@ to load a json, click the `Load Lights from JSON` button in the ui. heres a good
 
 the lights from this json are in city, first go there and then load.
 
-if you spawn too many lights, your game ***WILL*** lag, depending on how much lights there are.
+have fun and report issues in the [*issues*](https://github.com/BrokenSt0ne/phosphorite/issues) tab, or submit a [*pull request*](https://github.com/BrokenSt0ne/phosphorite/pulls) if you actually know how to code.
 
-have fun and report issues in the *issues* tab at the top, or submit *pull requests* if you actually know how to code lol
-![image](https://github.com/user-attachments/assets/ed4460ea-2ab8-4374-9c6e-f0723ee39cb2)
+## disclaimer
+
+this project is not affiliated with Another Axiom, LLC, Gorilla Tag, and all other content relating to their projects are owned by them.
+
+this project also follows the [*Fan Content and Mod Policy.*](https://www.gorillatagvr.com/fan-content-mod-policy)
+
+this mod currently *does* work inside of non-modded lobbies, as it does not give an advantage to play.
