@@ -8,6 +8,8 @@ In the UI you should be greeted with options for position, intensity and color a
 
 To load a json, click the `Load Lights from JSON` button in the ui. [Heres a good example of a json.](https://github.com/BrokenSt0ne/phosphorite/blob/main/data.json) *(note that it must be called data.json as of now and the example is only in city)*
 
+If you don't have a folder called "phospherite" in your root BepInEx folder, create it manually and drag the data.json inside.
+
 If you spawn too many lights, your game ***WILL*** lag, depending on how many lights there are.
 
 Report issues in the *issues* tab at the top, or submit *pull requests* if you actually know how to code lol
