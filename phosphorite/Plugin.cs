@@ -12,6 +12,11 @@ using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using GorillaNetworking;
 
+//credits
+//biotest: helping with patch shit
+//graze: helping my dumbass
+//brokenstone: me making mod idk
+
 namespace phosphorite
 {
     [BepInPlugin("com.brokenstone.gorillatag.phosphorite", "phosphorite", "1.0.0")]
@@ -47,12 +52,11 @@ namespace phosphorite
         private float lightIntensity = 1f;
         private Color lightColor = Color.white;
 
-        private LightType lightType;
-
         private string xInput = "0", yInput = "0", zInput = "0";
         private string intensityInput = "1";
-        private string rotationX = "0", rotationY = "0", rotationZ = "0";
         private string colorInput = "#ffffff";
+
+        private string ambientColor = "#ffffff";
 
         private bool saved;
 
@@ -90,16 +94,15 @@ namespace phosphorite
             lightingManager = GameObject.Find("Miscellaneous Scripts/GameLightManager").GetComponent<GameLightingManager>();
 
             lightingManager.SetCustomDynamicLightingEnabled(true);
-            lightingManager.SetAmbientLightDynamic(new Color(0.5f, 0.5f, 0.5f));
+            lightingManager.SetAmbientLightDynamic(new Color(1f, 1f, 1f));
 
-            Destroy(GorillaTagger.Instance.mainCamera.transform.FindChildRecursive("PlayerTempLight"));
-            //Destroy(GorillaTagger.Instance.mainCamera.GetComponentInChildren<GameLight>(includeInactive: true));
-
+            //enables experimental auto light maker
             //SceneManager.sceneLoaded += SceneLoaded;
             //SceneManager.sceneUnloaded += delegate { SceneLoaded(SceneManager.GetActiveScene(), LoadSceneMode.Additive); };
         }
 
-        private void SceneLoaded(Scene arg0, LoadSceneMode arg1)
+        //experimental auto light maker
+        /*private void SceneLoaded(Scene arg0, LoadSceneMode arg1)
         {
             lightingManager.ClearGameLights();
             foreach (var bakeryLight in FindObjectsOfType<BakeryPointLight>(includeInactive: true))
@@ -112,7 +115,7 @@ namespace phosphorite
                     AddDebugLight(bakeryLight.transform.position, bakeryLight.intensity * 2, bakeryLight.color);
                 }
             }
-        }
+        }*/
 
         public void Update()
         {
@@ -125,7 +128,15 @@ namespace phosphorite
             {
                 return;
             }
-            GUILayout.BeginArea(new Rect(10, 60, 300, 400), "Light Spawner", GUI.skin.window);
+            GUILayout.BeginArea(new Rect(10, 60, 300, 450), "Light Spawner", GUI.skin.window);
+
+            GUILayout.Label("Ambient Color");
+            ambientColor = GUILayout.TextField(ambientColor);
+            if(GUILayout.Button("Apply Ambient Color"))
+            {
+                ColorUtility.TryParseHtmlString(ambientColor, out Color amColor);
+                lightingManager.SetAmbientLightDynamic(amColor);
+            }
 
             GUILayout.Label("Position (X, Y, Z)");
             xInput = GUILayout.TextField(xInput);
@@ -150,14 +161,15 @@ namespace phosphorite
                 }
                 else
                 {
-                    Debug.LogWarning("Invalid input for position/intensity/color.");
+                    Debug.LogWarning("Invalid input for position/intensity/color");
                 }
             }
 
-            if (GUILayout.Button("Clear All Lights"))
+            if (GUILayout.Button("Remove Last Light"))
             {
-                lightingManager.ClearGameLights();
-                lightData.Clear();
+                int lastGameLight = lightList.Count - 1;
+                lightingManager.RemoveGameLight(lightList.ToArray()[lastGameLight]);
+                lightList.RemoveAt(lastGameLight);
             }
 
             if (GUILayout.Button("Go To Player Pos"))
@@ -202,15 +214,13 @@ namespace phosphorite
                 }
             }
 
-            if (GUILayout.Button("Remove Last Light"))
+            if (GUILayout.Button("Clear All Lights"))
             {
-
-                int lastGameLight = lightList.Count - 1;
-                lightingManager.RemoveGameLight(lightList.ToArray()[lastGameLight]);
-                lightList.RemoveAt(lastGameLight);
+                lightingManager.ClearGameLights();
+                lightData.Clear();
             }
 
-            if (GUILayout.Button("Fill Lights"))
+            /*if (GUILayout.Button("Fill Lights"))
             {
                 foreach(var lightFlag in Resources.FindObjectsOfTypeAll<FlagForBaking>())
                 {
@@ -222,11 +232,12 @@ namespace phosphorite
                         AddDebugLight(lightFlag.transform.position, lightFlag.GetComponent<Light>().intensity * 2, lightFlag.GetComponent<Light>().color);
                     }
                 }
-            }
+            }*/
 
             GUILayout.EndArea();
         }
 
+        //called debug light because i was messing with something else, im not strikergpt zawg
         void AddDebugLight(Vector3 position, float intensity, Color color)
         {
             GameObject lightObj = new GameObject("DebugLight");
@@ -252,7 +263,7 @@ namespace phosphorite
                 lightData.Add(new LightDataCustom(position, intensity, color));
             }
             else
-                Debug.LogWarning("Failed to add GameLight.");
+                Debug.LogWarning("Failed to add GameLight (skill issue)");
         }
     }
 }

@@ -5,3 +5,8 @@
 /.vs
 phosphorite/Directory.Build.props
 *.props
+/phosphorite/Directory.Build.props
+/phosphorite/Directory.Build.props
+/phosphorite/Directory.Build.props
+/.gitignore
+/.gitignore
