@@ -1,4 +1,7 @@
 # phosphorite
+<div align="left">
+ <img src="https://github.com/BrokenSt0ne/phosphorite/blob/main/preview.png?raw=true" width=50% height=40%</img><br>
+</div>
 A WIP Experimental real-time lighting mod for Gorilla Tag using the GorillaCorp lighting.
 
 ## Usage
