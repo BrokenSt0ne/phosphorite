@@ -190,27 +190,15 @@ namespace phosphorite
                 if (File.Exists(Path.Combine(PluginDirectory, "data.json")))
                 {
                     string jsonText = File.ReadAllText(Path.Combine(PluginDirectory, "data.json"));
-                    if (jsonText.Contains("[{\"pos\":{\"x\""))
-                    {
-                        Debug.Log("loading a V1 json");
-                        // V1 json
-                        List<LightDataCustom>? gameLights =
-                            Newtonsoft.Json.JsonConvert.DeserializeObject<List<LightDataCustom>>(jsonText);
-                        if (gameLights != null)
-                            foreach (LightDataCustom gameLight in gameLights)
-                                AddDebugLight(gameLight.pos, gameLight.intensity, gameLight.color);
-                    }
-                    else
-                    {
-                        Debug.Log("loading a V2 json");
-                        // V2 json (new thing: AMBIENT COLOR!!!! ik its nothing much but i hate running the function everytime i load a v1 json)
-                        LightSettings? lightSettings = JsonConvert.DeserializeObject<LightSettings?>(jsonText);
-                        lightingManager.SetAmbientLightDynamic(lightSettings.ambientColor);
+
+                    Debug.Log("loading a V2 json");
+                    // V2 json (new thing: AMBIENT COLOR!!!! ik its nothing much but i hate running the function everytime i load a v1 json)
+                    LightSettings? lightSettings = JsonConvert.DeserializeObject<LightSettings?>(jsonText);
+                    lightingManager.SetAmbientLightDynamic(lightSettings.ambientColor);
                         
-                        if (lightSettings.lights != null)
-                            foreach (LightDataCustom gameLight in lightSettings.lights)
-                                AddDebugLight(gameLight.pos, gameLight.intensity, gameLight.color);
-                    }
+                    if (lightSettings.lights != null) 
+                        foreach (LightDataCustom gameLight in lightSettings.lights) 
+                            AddDebugLight(gameLight.pos, gameLight.intensity, gameLight.color);
                 }
             }
 
