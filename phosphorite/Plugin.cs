@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -11,11 +11,7 @@ using Unity.Mathematics;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using GorillaNetworking;
-
-//credits
-//biotest: helping with patch shit
-//graze: helping my dumbass
-//brokenstone: me making mod idk
+using System.Threading.Tasks;
 
 namespace phosphorite
 {
@@ -73,13 +69,12 @@ namespace phosphorite
         {
             GorillaTagger.OnPlayerSpawned(Initialize);
         }
-
         IEnumerator SaveLights()
         {
             lightSettings = new LightSettings();
             lightSettings.ambientColor = Shader.GetGlobalColor("_GT_GameLight_Ambient_Color");
             lightSettings.lights = lightData;
-            
+
             string json = Newtonsoft.Json.JsonConvert.SerializeObject(lightSettings, Formatting.Indented);
 
             Directory.CreateDirectory(PluginDirectory);
@@ -95,31 +90,16 @@ namespace phosphorite
 
             lightingManager.SetCustomDynamicLightingEnabled(true);
             lightingManager.SetAmbientLightDynamic(new Color(1f, 1f, 1f));
-
-            //enables experimental auto light maker
-            //SceneManager.sceneLoaded += SceneLoaded;
-            //SceneManager.sceneUnloaded += delegate { SceneLoaded(SceneManager.GetActiveScene(), LoadSceneMode.Additive); };
+            LoadFromJSON();
         }
-
-        //experimental auto light maker
-        /*private void SceneLoaded(Scene arg0, LoadSceneMode arg1)
-        {
-            lightingManager.ClearGameLights();
-            foreach (var bakeryLight in FindObjectsOfType<BakeryPointLight>(includeInactive: true))
-            {
-                if (bakeryLight.GetComponent<Light>() != null)
-                {
-                    //Debug.Log("Found light " + lightFlag.name);
-                    bakeryLight.gameObject.SetActive(true);
-                    bakeryLight.GetComponent<Light>().enabled = true;
-                    AddDebugLight(bakeryLight.transform.position, bakeryLight.intensity * 2, bakeryLight.color);
-                }
-            }
-        }*/
 
         public void Update()
         {
             if (Keyboard.current.vKey.wasPressedThisFrame) onGUIEnabled ^= true;
+            if (GameObject.Find("Environment Objects/LocalObjects_Prefab/Forest/Environment/WeatherDayNight/AudioCrickets").activeSelf == true)
+            {
+                LoadFromJSON();
+            }
         }
 
         void OnGUI()
@@ -132,7 +112,7 @@ namespace phosphorite
 
             GUILayout.Label("Ambient Color");
             inputAmbientColor = GUILayout.TextField(inputAmbientColor);
-            if(GUILayout.Button("Apply Ambient Color"))
+            if (GUILayout.Button("Apply Ambient Color"))
             {
                 ColorUtility.TryParseHtmlString(inputAmbientColor, out Color amColor);
                 lightingManager.SetAmbientLightDynamic(amColor);
@@ -179,27 +159,14 @@ namespace phosphorite
                 zInput = Camera.main.transform.position.z.ToString();
             }
 
-            if(GUILayout.Button("Save Lights to JSON"))
+            if (GUILayout.Button("Save Lights to JSON"))
             {
                 StartCoroutine(SaveLights());
             }
 
-            if(GUILayout.Button("Load Lights from JSON"))
+            if (GUILayout.Button("Load Lights from JSON"))
             {
-                lightingManager.ClearGameLights();
-                if (File.Exists(Path.Combine(PluginDirectory, "data.json")))
-                {
-                    string jsonText = File.ReadAllText(Path.Combine(PluginDirectory, "data.json"));
-
-                    Debug.Log("loading a V2 json");
-                    // V2 json (new thing: AMBIENT COLOR!!!! ik its nothing much but i hate running the function everytime i load a v1 json)
-                    LightSettings? lightSettings = JsonConvert.DeserializeObject<LightSettings?>(jsonText);
-                    lightingManager.SetAmbientLightDynamic(lightSettings.ambientColor);
-                        
-                    if (lightSettings.lights != null) 
-                        foreach (LightDataCustom gameLight in lightSettings.lights) 
-                            AddDebugLight(gameLight.pos, gameLight.intensity, gameLight.color);
-                }
+                LoadFromJSON();
             }
 
             if (GUILayout.Button("Clear All Lights"))
@@ -208,24 +175,48 @@ namespace phosphorite
                 lightData.Clear();
             }
 
-            /*if (GUILayout.Button("Fill Lights"))
-            {
-                foreach(var lightFlag in Resources.FindObjectsOfTypeAll<FlagForBaking>())
-                {
-                    if(lightFlag.GetComponent<Light>() != null)
-                    {
-                        Debug.Log("Found light " + lightFlag.name);
-                        lightFlag.gameObject.SetActive(true);
-                        lightFlag.GetComponent<Light>().enabled = true;
-                        AddDebugLight(lightFlag.transform.position, lightFlag.GetComponent<Light>().intensity * 2, lightFlag.GetComponent<Light>().color);
-                    }
-                }
-            }*/
-
             GUILayout.EndArea();
         }
 
-        //called debug light because i was messing with something else, im not strikergpt zawg
+        void LoadFromJSON()
+        {
+            lightingManager.ClearGameLights();
+            if (File.Exists(Path.Combine(PluginDirectory, "data.json")))
+            {
+                string jsonText = File.ReadAllText(Path.Combine(PluginDirectory, "data.json"));
+                if (jsonText.Contains("[{\"pos\":{\"x\""))
+                {
+                    Debug.Log("loading a V1 json");
+                    List<LightDataCustom>? gameLights =
+                        Newtonsoft.Json.JsonConvert.DeserializeObject<List<LightDataCustom>>(jsonText);
+                    if (gameLights != null)
+                        foreach (LightDataCustom gameLight in gameLights)
+                            AddDebugLight(gameLight.pos, gameLight.intensity, gameLight.color);
+                }
+                else
+                {
+                    Debug.Log("loading a V2 json");
+                    LightSettings? lightSettings = JsonConvert.DeserializeObject<LightSettings?>(jsonText);
+                    lightingManager.SetAmbientLightDynamic(lightSettings.ambientColor);
+
+                    if (lightSettings.lights != null)
+                        foreach (LightDataCustom gameLight in lightSettings.lights)
+                            AddDebugLight(gameLight.pos, gameLight.intensity, gameLight.color);
+
+                    try
+                    {
+                        var raw = JsonConvert.DeserializeObject<Dictionary<string, object>>(jsonText);
+                        if (raw.TryGetValue("timeOfDay", out var timeObj))
+                        {
+                            int time = Convert.ToInt32(timeObj);
+                            BetterDayNightManager.instance.SetTimeOfDay(time);
+                        }
+                    }
+                    catch { }
+                }
+            }
+        }
+
         void AddDebugLight(Vector3 position, float intensity, Color color)
         {
             GameObject lightObj = new GameObject("DebugLight");
@@ -242,7 +233,7 @@ namespace phosphorite
 
             if (intensity <= 0)
                 gameLight.negativeLight = true;
-            
+
             lightList.Add(gameLight);
             int id = lightingManager.AddGameLight(gameLight);
             if (id >= 0)
