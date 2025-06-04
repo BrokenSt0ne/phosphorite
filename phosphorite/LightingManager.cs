@@ -12,8 +12,8 @@ namespace phosphorite
 {
     public class LightingManager : MonoBehaviour
     {
-        private List<GameLight> lightList = new List<GameLight>();
-        private List<GameObject> lightObjectList = new List<GameObject>();
+        public static List<GameLight> lightList = new List<GameLight>();
+        public static List<GameObject> lightObjectList = new List<GameObject>();
         public static List<LightDataCustom> lightData = new List<LightDataCustom>();
 
         public static GameLightingManager instance;
