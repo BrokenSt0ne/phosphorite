@@ -2,15 +2,10 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using BepInEx;
-using GorillaLocomotion;
 using UnityEngine;
 using Newtonsoft.Json;
-using Unity.Mathematics;
 using UnityEngine.InputSystem;
-using UnityEngine.SceneManagement;
-using GorillaNetworking;
 
 //credits
 //biotest: helping with patch shit
@@ -22,29 +17,10 @@ namespace phosphorite
     [BepInPlugin("com.brokenstone.gorillatag.phosphorite", "phosphorite", "1.0.0")]
     public class Plugin : BaseUnityPlugin
     {
-        public class LightDataCustom
-        {
-            public LightDataCustom(Vector3 pos, float intensity, Color color)
-            {
-                this.pos = pos;
-                this.intensity = intensity;
-                this.color = color;
-            }
-
-            public Vector3 pos;
-            public float intensity;
-            public Color color;
-        }
-
-        public class LightSettings
-        {
-            public Color ambientColor;
-            public List<LightDataCustom> lights;
-        }
-
-        public static GameLightingManager lightingManager;
-
         public bool onGUIEnabled;
+        public bool useFreecam;
+
+        public GameObject __instance;
 
         public List<GameLight> lightList = new List<GameLight>();
 
@@ -58,11 +34,22 @@ namespace phosphorite
 
         private string inputAmbientColor = "#ffffff";
 
-        private bool saved;
+        public Rect mainWindowRect = new Rect(10, 60, 300, 470);
+        public Rect lightWindowRect = new Rect(320, 60, 300, 500);
+        public Rect individualLightWindowRect;
 
-        private string PluginDirectory => Path.Combine(Paths.BepInExRootPath, "phosphorite");
-        private List<LightDataCustom> lightData = new List<LightDataCustom>();
-        public LightSettings lightSettings;
+        // New Light Shit
+        Vector2 scrollPos;
+
+        bool haveEditorWindow;
+        int lightID;
+
+        GameLight currentLight;
+        GameObject lightVisualizer;
+
+        private string newIntensity = "1";
+        private string newColor = "#ffffff";
+        private string xNInput = "0", yNInput = "0", zNInput = "0";
 
         Plugin()
         {
@@ -74,74 +61,63 @@ namespace phosphorite
             GorillaTagger.OnPlayerSpawned(Initialize);
         }
 
-        IEnumerator SaveLights()
-        {
-            lightSettings = new LightSettings();
-            lightSettings.ambientColor = Shader.GetGlobalColor("_GT_GameLight_Ambient_Color");
-            lightSettings.lights = lightData;
-            
-            string json = Newtonsoft.Json.JsonConvert.SerializeObject(lightSettings, Formatting.Indented);
-
-            Directory.CreateDirectory(PluginDirectory);
-            File.WriteAllText(Path.Combine(PluginDirectory, "data.json"), json);
-
-            yield return null;
-            saved = true;
-        }
-
         public void Initialize()
         {
-            lightingManager = GameObject.Find("Miscellaneous Scripts/GameLightManager").GetComponent<GameLightingManager>();
-
-            lightingManager.SetCustomDynamicLightingEnabled(true);
-            lightingManager.SetAmbientLightDynamic(new Color(1f, 1f, 1f));
-
-            //enables experimental auto light maker
-            //SceneManager.sceneLoaded += SceneLoaded;
-            //SceneManager.sceneUnloaded += delegate { SceneLoaded(SceneManager.GetActiveScene(), LoadSceneMode.Additive); };
+            __instance = new GameObject("LightingManager");
+            __instance.AddComponent<LightingManager>();
+            //__instance.AddComponent<FreecamManager>();
+            LightingManager.instance.SetCustomDynamicLightingEnabled(true);
+            LightingManager.instance.SetAmbientLightDynamic(Color.white);
         }
-
-        //experimental auto light maker
-        /*private void SceneLoaded(Scene arg0, LoadSceneMode arg1)
-        {
-            lightingManager.ClearGameLights();
-            foreach (var bakeryLight in FindObjectsOfType<BakeryPointLight>(includeInactive: true))
-            {
-                if (bakeryLight.GetComponent<Light>() != null)
-                {
-                    //Debug.Log("Found light " + lightFlag.name);
-                    bakeryLight.gameObject.SetActive(true);
-                    bakeryLight.GetComponent<Light>().enabled = true;
-                    AddDebugLight(bakeryLight.transform.position, bakeryLight.intensity * 2, bakeryLight.color);
-                }
-            }
-        }*/
 
         public void Update()
         {
             if (Keyboard.current.vKey.wasPressedThisFrame) onGUIEnabled ^= true;
+            if(onGUIEnabled == false && lightVisualizer != null)
+            {
+                Destroy(lightVisualizer);
+            }
         }
 
         void OnGUI()
         {
             if (!onGUIEnabled)
             {
+                useFreecam = false;
                 return;
             }
-            GUILayout.BeginArea(new Rect(10, 60, 300, 450), "Light Spawner", GUI.skin.window);
+            useFreecam = true;
+            mainWindowRect = GUILayout.Window(0, mainWindowRect, MainEditorWindow, "Light Spawner", GUI.skin.window);
+            lightWindowRect = GUILayout.Window(1, lightWindowRect, LightEditorWindow, "Light Editor", GUI.skin.window);
+            if (haveEditorWindow)
+            {
+                individualLightWindowRect = GUILayout.Window(2, new Rect(lightWindowRect.x + lightWindowRect.width + 20, lightWindowRect.y, 300, 300), individualLightWindow, "Individual Light", GUI.skin.window);
+            }
+        }
 
+        void MainEditorWindow(int windowID)
+        {
+            GUI.DragWindow(new Rect(0, 0, 10000, 20));
+            GUILayout.BeginVertical();
             GUILayout.Label("Ambient Color");
             inputAmbientColor = GUILayout.TextField(inputAmbientColor);
-            if(GUILayout.Button("Apply Ambient Color"))
+            if (GUILayout.Button("Apply Ambient Color"))
             {
                 ColorUtility.TryParseHtmlString(inputAmbientColor, out Color amColor);
-                lightingManager.SetAmbientLightDynamic(amColor);
+                LightingManager.instance.SetAmbientLightDynamic(amColor);
             }
 
-            GUILayout.Label("Position (X, Y, Z)");
+            GUILayout.Label("Position (XYZ)");
             xInput = GUILayout.TextField(xInput);
             yInput = GUILayout.TextField(yInput);
             zInput = GUILayout.TextField(zInput);
+
+            if (GUILayout.Button("Set to Player Position"))
+            {
+                xInput = Camera.main.transform.position.x.ToString();
+                yInput = Camera.main.transform.position.y.ToString();
+                zInput = Camera.main.transform.position.z.ToString();
+            }
 
             GUILayout.Label("Intensity");
             intensityInput = GUILayout.TextField(intensityInput);
@@ -157,7 +133,7 @@ namespace phosphorite
                     float.TryParse(intensityInput, out float intensity) &&
                     ColorUtility.TryParseHtmlString(colorInput, out Color color))
                 {
-                    AddDebugLight(new Vector3(x, y, z), intensity, color);
+                    LightingManager.AddLight(new Vector3(x, y, z), intensity, color);
                 }
                 else
                 {
@@ -168,90 +144,140 @@ namespace phosphorite
             if (GUILayout.Button("Remove Last Light"))
             {
                 int lastGameLight = lightList.Count - 1;
-                lightingManager.RemoveGameLight(lightList.ToArray()[lastGameLight]);
+                LightingManager.instance.RemoveGameLight(lightList.ToArray()[lastGameLight]);
                 lightList.RemoveAt(lastGameLight);
             }
 
-            if (GUILayout.Button("Go To Player Pos"))
+            GUILayout.Space(16);
+
+            if (GUILayout.Button("Save Lights to JSON"))
             {
-                xInput = Camera.main.transform.position.x.ToString();
-                yInput = Camera.main.transform.position.y.ToString();
-                zInput = Camera.main.transform.position.z.ToString();
+                StartCoroutine(LightingManager.SaveLights());
             }
 
-            if(GUILayout.Button("Save Lights to JSON"))
+            if (GUILayout.Button("Load Lights from JSON"))
             {
-                StartCoroutine(SaveLights());
-            }
-
-            if(GUILayout.Button("Load Lights from JSON"))
-            {
-                lightingManager.ClearGameLights();
-                if (File.Exists(Path.Combine(PluginDirectory, "data.json")))
+                LightingManager.instance.ClearGameLights();
+                if (File.Exists(Path.Combine(LightingManager.PluginDirectory, "data.json")))
                 {
-                    string jsonText = File.ReadAllText(Path.Combine(PluginDirectory, "data.json"));
+                    string jsonText = File.ReadAllText(Path.Combine(LightingManager.PluginDirectory, "data.json"));
 
                     Debug.Log("loading a V2 json");
-                    // V2 json (new thing: AMBIENT COLOR!!!! ik its nothing much but i hate running the function everytime i load a v1 json)
-                    LightSettings? lightSettings = JsonConvert.DeserializeObject<LightSettings?>(jsonText);
-                    lightingManager.SetAmbientLightDynamic(lightSettings.ambientColor);
-                        
-                    if (lightSettings.lights != null) 
-                        foreach (LightDataCustom gameLight in lightSettings.lights) 
-                            AddDebugLight(gameLight.pos, gameLight.intensity, gameLight.color);
+                    // V2 json
+                    LightingManager.LightSettings? lightSettings = JsonConvert.DeserializeObject<LightingManager.LightSettings?>(jsonText);
+                    LightingManager.instance.SetAmbientLightDynamic(lightSettings.ambientColor);
+
+                    if (lightSettings.lights != null)
+                        foreach (LightingManager.LightDataCustom gameLight in lightSettings.lights)
+                            LightingManager.AddLight(gameLight.pos, gameLight.intensity, gameLight.color);
                 }
             }
 
             if (GUILayout.Button("Clear All Lights"))
             {
-                lightingManager.ClearGameLights();
-                lightData.Clear();
+                LightingManager.instance.ClearGameLights();
+                LightingManager.lightData.Clear();
+                LightingManager.instance.SetAmbientLightDynamic(Color.white);
+                Destroy(lightVisualizer);
+                haveEditorWindow = false;
             }
 
-            /*if (GUILayout.Button("Fill Lights"))
-            {
-                foreach(var lightFlag in Resources.FindObjectsOfTypeAll<FlagForBaking>())
-                {
-                    if(lightFlag.GetComponent<Light>() != null)
-                    {
-                        Debug.Log("Found light " + lightFlag.name);
-                        lightFlag.gameObject.SetActive(true);
-                        lightFlag.GetComponent<Light>().enabled = true;
-                        AddDebugLight(lightFlag.transform.position, lightFlag.GetComponent<Light>().intensity * 2, lightFlag.GetComponent<Light>().color);
-                    }
-                }
-            }*/
-
-            GUILayout.EndArea();
+            GUILayout.EndVertical();
         }
 
-        //called debug light because i was messing with something else, im not strikergpt zawg
-        void AddDebugLight(Vector3 position, float intensity, Color color)
+        void LightEditorWindow(int windowID)
         {
-            GameObject lightObj = new GameObject("DebugLight");
-            lightObj.transform.position = position;
-            lightObj.transform.rotation = Quaternion.identity;
-
-            Light unityLight = lightObj.AddComponent<Light>();
-            unityLight.type = LightType.Point;
-            unityLight.intensity = intensity;
-            unityLight.color = color;
-
-            GameLight gameLight = lightObj.AddComponent<GameLight>();
-            gameLight.light = unityLight;
-
-            if (intensity <= 0)
-                gameLight.negativeLight = true;
-            
-            lightList.Add(gameLight);
-            int id = lightingManager.AddGameLight(gameLight);
-            if (id >= 0)
+            GUI.DragWindow(new Rect(0, 0, 10000, 20));
+            scrollPos = GUILayout.BeginScrollView(scrollPos);
+            if (LightingManager.instance.gameLights != null)
             {
-                Debug.Log($"Added GameLight with ID: {id}");
-                lightData.Add(new LightDataCustom(position, intensity, color));
+                for(int i = 0; i < LightingManager.instance.gameLights.Count; i++)
+                {
+                    if(GUILayout.Button("Edit Light " + i))
+                    {
+                        haveEditorWindow = true;
+                        lightID = i;
+                        currentLight = LightingManager.instance.gameLights[i];
+                    }
+                }
             }
-            else
-                Debug.LogWarning("Failed to add GameLight (skill issue)");
+
+            GUILayout.EndScrollView();
+        }
+
+        void individualLightWindow(int windowID)
+        {
+            if (lightVisualizer == null)
+            {
+                lightVisualizer = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                lightVisualizer.GetComponent<Renderer>().material.shader = Shader.Find("Universal Render Pipeline/Unlit");
+                lightVisualizer.GetComponent<SphereCollider>().enabled = false;
+                lightVisualizer.GetComponent<Renderer>().material.color = currentLight.light.color;
+            }
+            lightVisualizer.transform.localScale = new Vector3(0.1f, 0.1f, 0.1f);
+            lightVisualizer.transform.position = currentLight.gameObject.transform.position;
+
+            GUI.DragWindow(new Rect(0, 0, 10000, 20));
+            GUILayout.Label("Light " + lightID);
+            GUILayout.Space(2);
+
+            GUILayout.Label("Current intensity: " + currentLight.light.intensity);
+            newIntensity = GUILayout.TextField(newIntensity);
+            if(GUILayout.Button("Set Intensity"))
+            {
+                var __newIntensity = float.Parse(newIntensity);
+                currentLight.light.intensity = __newIntensity;
+            }
+            GUILayout.Space(8);
+
+            Color32 color32 = currentLight.light.color;
+            GUILayout.Label("Current color: " + $"#{color32.r:X2}{color32.g:X2}{color32.b:X2}");
+            newColor = GUILayout.TextField(newColor);
+            if(GUILayout.Button("Set Color"))
+            {
+                ColorUtility.TryParseHtmlString(newColor, out Color color);
+                currentLight.light.color = color;
+                lightVisualizer.GetComponent<Renderer>().material.color = color;
+            }
+            GUILayout.Space(8);
+
+            GUILayout.Label("Position (XYZ)");
+            xNInput = GUILayout.TextField(xNInput);
+            yNInput = GUILayout.TextField(yNInput);
+            zNInput = GUILayout.TextField(zNInput);
+
+            if (GUILayout.Button("Set to Player Position"))
+            {
+                xNInput = Camera.main.transform.position.x.ToString();
+                yNInput = Camera.main.transform.position.y.ToString();
+                zNInput = Camera.main.transform.position.z.ToString();
+            }
+
+            if (GUILayout.Button("Set New Position"))
+            {
+                float.TryParse(xNInput, out float x);
+                float.TryParse(yNInput, out float y);
+                float.TryParse(zNInput, out float z);
+                currentLight.transform.position = new Vector3(x, y, z);
+            }
+            GUILayout.Space(8);
+
+            if (GUILayout.Button("Destroy Light"))
+            {
+                Destroy(lightVisualizer);
+                LightingManager.instance.RemoveGameLight(currentLight);
+                haveEditorWindow = false;
+                if(currentLight.lightId != 0)
+                {
+                    currentLight = LightingManager.lightList[currentLight.lightId - 1];
+                }
+            }
+
+            if (GUILayout.Button("Close Window"))
+            {
+                haveEditorWindow = false;
+                Destroy(lightVisualizer);
+            }
         }
     }
 }

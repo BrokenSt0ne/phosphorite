@@ -36,57 +36,6 @@ public class GameLightingManagerPatches
         __instance.SetCustomDynamicLightingEnabled(enable: false);
         return false;
     }
-
-    /*[HarmonyPatch(nameof(GameLightingManager.SortLights)), HarmonyPrefix]
-    public static bool SortLights(GameLightingManager __instance)
-    {
-        if (__instance.gameLights.Count <= MaxLightCount || __instance.mainCameraTransform == null)
-            return false;
-
-        lock (sortLock)
-        {
-            if (sortingTask == null || sortingTask.IsCompleted)
-            {
-                Vector3 cameraPosition = __instance.mainCameraTransform.position;
-                float maxDistSqr = LightViewRadius * LightViewRadius;
-
-                sortingTask = Task.Run(() =>
-                {
-                    List<GameLight> visibleLights = new();
-
-                    foreach (var light in __instance.gameLights)
-                    {
-                        if (light?.light == null) continue;
-
-                        float distSqr = (cameraPosition - light.light.transform.position).sqrMagnitude;
-                        if (distSqr <= maxDistSqr)
-                            visibleLights.Add(light);
-                    }
-
-                    visibleLights.Sort((a, b) =>
-                    {
-                        float distA = (cameraPosition - a.light.transform.position).sqrMagnitude;
-                        float distB = (cameraPosition - b.light.transform.position).sqrMagnitude;
-                        return distA.CompareTo(distB);
-                    });
-
-                    lock (sortLock)
-                    {
-                        sortedLights = visibleLights;
-                        sortComplete = true;
-                    }
-                });
-            }
-
-            if (sortComplete)
-            {
-                __instance.gameLights = new List<GameLight>(sortedLights);
-                sortComplete = false;
-            }
-        }
-
-        return false;
-    }*/
     
     [HarmonyPatch(nameof(GameLightingManager.CompareDistFromCamera)), HarmonyPrefix]
     public static bool CompareDistFromCamera(GameLightingManager __instance, GameLight a, GameLight b, ref int __result)
