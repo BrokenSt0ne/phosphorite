@@ -7,6 +7,8 @@
 A WIP Experimental real-time lighting mod for Gorilla Tag using the GorillaCorp lighting.
 
 ## Usage
+**If it doesn't look like it's working, set your ambient color to #000000 and add a light at your location**
+
 You create and load lights via a menu opened by pressing the `V` key on your keyboard (they do *not* autoload as of now).
 
 In the UI you should be greeted with options for position, intensity and color and a couple utility buttons beneath.
