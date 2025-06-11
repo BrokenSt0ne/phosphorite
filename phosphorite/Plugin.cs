@@ -6,6 +6,7 @@ using BepInEx;
 using UnityEngine;
 using Newtonsoft.Json;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 
 //credits
 //biotest: helping with patch shit
@@ -68,6 +69,17 @@ namespace phosphorite
             //__instance.AddComponent<FreecamManager>();
             LightingManager.instance.SetCustomDynamicLightingEnabled(true);
             LightingManager.instance.SetAmbientLightDynamic(Color.white);
+
+            SceneManager.sceneUnloaded += OnHorrorMapUnloaded;
+        }
+
+        void OnHorrorMapUnloaded(Scene scene)
+        {
+            if (scene.name.ToLower().Contains("ghost"))
+            {
+                LightingManager.instance.SetCustomDynamicLightingEnabled(true);
+                LightingManager.instance.SetAmbientLightDynamic(Color.white);
+            }
         }
 
         public void Update()
